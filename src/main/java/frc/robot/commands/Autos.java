@@ -2,14 +2,14 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-package first.robot.commands;
+package frc.robot.commands;
 
-import org.wpilib.command2.Command;
-import org.wpilib.command2.Commands;
-import org.wpilib.command2.FunctionalCommand;
-import first.robot.Constants.AutoConstants;
-import first.robot.subsystems.DriveSubsystem;
-import first.robot.subsystems.Crusher;
+import frc.robot.Constants.AutoConstants;
+import frc.robot.subsystems.DriveSubsystem;
+import frc.robot.subsystems.Crusher;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 
 /** Container for auto command factories. */
 public final class Autos {
@@ -19,7 +19,7 @@ public final class Autos {
         // Reset encoders on command start
         drive::resetEncoders,
         // Drive forward while the command is executing
-        () -> drive.arcadeDrive(AutoConstants.kAutoDriveVelocity, 0),
+        () -> drive.arcadeDrive(AutoConstants.kAutoDriveSpeed, 0),
         // Stop driving at the end of the command
         interrupt -> drive.arcadeDrive(0, 0),
         // End the command when the robot's driven distance exceeds the desired value
@@ -29,14 +29,14 @@ public final class Autos {
   }
 
   /** A complex auto routine that drives forward, drops a hatch, and then drives backward. */
-  public static Command complexAuto(DriveSubsystem driveSubsystem, Crusher hatchSubsystem) {
+  public static Command complexAuto(DriveSubsystem driveSubsystem, Crusher crusher) {
     return Commands.sequence(
         // Drive forward up to the front of the cargo ship
         new FunctionalCommand(
             // Reset encoders on command start
             driveSubsystem::resetEncoders,
             // Drive forward while the command is executing
-            () -> driveSubsystem.arcadeDrive(AutoConstants.kAutoDriveVelocity, 0),
+            () -> driveSubsystem.arcadeDrive(AutoConstants.kAutoDriveSpeed, 0),
             // Stop driving at the end of the command
             interrupt -> driveSubsystem.arcadeDrive(0, 0),
             // End the command when the robot's driven distance exceeds the desired value
@@ -47,14 +47,14 @@ public final class Autos {
             driveSubsystem),
 
         // Release the hatch
-        hatchSubsystem.releaseHatchCommand(),
+        crusher.releaseHatchCommand(),
 
         // Drive backward the specified distance
         new FunctionalCommand(
             // Reset encoders on command start
             driveSubsystem::resetEncoders,
             // Drive backward while the command is executing
-            () -> driveSubsystem.arcadeDrive(-AutoConstants.kAutoDriveVelocity, 0),
+            () -> driveSubsystem.arcadeDrive(-AutoConstants.kAutoDriveSpeed, 0),
             // Stop driving at the end of the command
             interrupt -> driveSubsystem.arcadeDrive(0, 0),
             // End the command when the robot's driven distance exceeds the desired value
