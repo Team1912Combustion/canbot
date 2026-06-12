@@ -4,9 +4,19 @@
 
 package first.robot.subsystems;
 
+import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.spark.SparkLowLevel.MotorType;
 import org.wpilib.command2.SubsystemBase;
 import org.wpilib.drive.DifferentialDrive;
+//import org.wpilib.drive.RobotDriveBase.MotorType;
+//
 import first.robot.Constants.DriveConstants;
+
+import org.wpilib.hardware.hal.CANBusMap;
 import org.wpilib.hardware.motor.PWMSparkMax;
 import org.wpilib.hardware.rotation.Encoder;
 import org.wpilib.util.sendable.SendableBuilder;
@@ -14,47 +24,41 @@ import org.wpilib.util.sendable.SendableRegistry;
 
 public class DriveSubsystem extends SubsystemBase {
   // The motors on the left side of the drive.
-  private final PWMSparkMax leftLeader = new PWMSparkMax(DriveConstants.kLeftMotor1Port);
-  private final PWMSparkMax leftFollower = new PWMSparkMax(DriveConstants.kLeftMotor2Port);
+  private final SparkMax leftLeader = new SparkMax(CANBusMap.CAN_S0, DriveConstants.kLeftMotor1Port, MotorType.kBrushless);
+  private final SparkMax leftFollower = new SparkMax(CANBusMap.CAN_S0, DriveConstants.kLeftMotor2Port, MotorType.kBrushless);
 
   // The motors on the right side of the drive.
-  private final PWMSparkMax rightLeader = new PWMSparkMax(DriveConstants.kRightMotor1Port);
-  private final PWMSparkMax rightFollower = new PWMSparkMax(DriveConstants.kRightMotor2Port);
+  private final SparkMax rightLeader = new SparkMax(CANBusMap.CAN_S0, DriveConstants.kRightMotor1Port, MotorType.kBrushless);
+  private final SparkMax rightFollower = new SparkMax(CANBusMap.CAN_S0, DriveConstants.kRightMotor2Port, MotorType.kBrushless);
 
   // The robot's drive
   private final DifferentialDrive drive =
       new DifferentialDrive(leftLeader::setThrottle, rightLeader::setThrottle);
-
-  // The left-side drive encoder
-  private final Encoder leftEncoder =
-      new Encoder(
-          DriveConstants.kLeftEncoderPorts[0],
-          DriveConstants.kLeftEncoderPorts[1],
-          DriveConstants.kLeftEncoderReversed);
-
-  // The right-side drive encoder
-  private final Encoder rightEncoder =
-      new Encoder(
-          DriveConstants.kRightEncoderPorts[0],
-          DriveConstants.kRightEncoderPorts[1],
-          DriveConstants.kRightEncoderReversed);
 
   /** Creates a new DriveSubsystem. */
   public DriveSubsystem() {
     SendableRegistry.addChild(drive, leftLeader);
     SendableRegistry.addChild(drive, rightLeader);
 
-    leftLeader.addFollower(leftFollower);
-    rightLeader.addFollower(rightFollower);
+    SparkMaxConfig globalConfig = new SparkMaxConfig();
+    SparkMaxConfig leftLeaderMotorConfig = new SparkMaxConfig();
+    SparkMaxConfig leftFollowerMotorConfig = new SparkMaxConfig();
+    SparkMaxConfig rightLeaderMotorConfig = new SparkMaxConfig();
+    SparkMaxConfig rightFollowerMotorConfig = new SparkMaxConfig();
 
-    // We need to invert one side of the drivetrain so that positive voltages
-    // result in both sides moving forward. Depending on how your robot's
-    // gearbox is constructed, you might have to invert the left side instead.
-    rightLeader.setInverted(true);
+    globalConfig
+      .smartCurrentLimit(50)
+      .idleMode(IdleMode.kBrake);
 
-    // Sets the distance per pulse for the encoders
-    leftEncoder.setDistancePerPulse(DriveConstants.kEncoderDistancePerPulse);
-    rightEncoder.setDistancePerPulse(DriveConstants.kEncoderDistancePerPulse);
+    leftLeaderMotorConfig.apply(globalConfig).inverted(false);
+    leftFollowerMotorConfig.apply(globalConfig).inverted(false).follow(leftLeader);
+    rightLeaderMotorConfig.apply(globalConfig).inverted(true);
+    rightFollowerMotorConfig.apply(globalConfig).inverted(true).follow(rightLeader);
+
+    leftLeader.configure(leftLeaderMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    leftFollower.configure(leftFollowerMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    rightLeader.configure(rightLeaderMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    rightFollower.configure(rightFollowerMotorConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
   }
 
   /**
@@ -67,20 +71,16 @@ public class DriveSubsystem extends SubsystemBase {
     drive.arcadeDrive(fwd, rot);
   }
 
-  /** Resets the drive encoders to currently read a position of 0. */
+  /*
   public void resetEncoders() {
     leftEncoder.reset();
     rightEncoder.reset();
   }
 
-  /**
-   * Gets the average distance of the TWO encoders.
-   *
-   * @return the average of the TWO encoder readings
-   */
   public double getAverageEncoderDistance() {
     return (leftEncoder.getDistance() + rightEncoder.getDistance()) / 2.0;
   }
+  */
 
   /**
    * Sets the max output of the drive. Useful for scaling the drive to drive more slowly.
@@ -95,7 +95,7 @@ public class DriveSubsystem extends SubsystemBase {
   public void initSendable(SendableBuilder builder) {
     super.initSendable(builder);
     // Publish encoder distances to telemetry.
-    builder.addDoubleProperty("leftDistance", leftEncoder::getDistance, null);
+    builder.addDoubleProperty("leftDistance", leftLeader::getEncoder, null);
     builder.addDoubleProperty("rightDistance", rightEncoder::getDistance, null);
   }
 }
